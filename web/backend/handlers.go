@@ -716,8 +716,8 @@ func handleCalculatePersonDay(c *gin.Context) {
 
 	holidays, err := dbGetHolidays()
 	if err != nil {
-		fmt.Printf("[PersonDay] 节假日查询失败，使用空map: %v\n", err)
-		holidays = make(map[string]string)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "节假日数据查询失败，无法计算人天: " + err.Error()})
+		return
 	}
 	calc := CalculatePersonDays(startTime, endTime, holidays)
 
