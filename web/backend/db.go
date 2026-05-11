@@ -92,8 +92,6 @@ func initDB() {
 		log.Fatalf("创建 person_days 表失败: %v", err)
 	}
 
-	db.Exec(`ALTER TABLE person_days ADD COLUMN work_content TEXT DEFAULT NULL COMMENT '工作内容' AFTER holiday_hours`)
-
 	if _, err := db.Exec(`
 		CREATE TABLE IF NOT EXISTS holidays (
 			date DATE NOT NULL PRIMARY KEY COMMENT '节假日日期',

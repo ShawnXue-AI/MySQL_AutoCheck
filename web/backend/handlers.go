@@ -590,7 +590,11 @@ func handleCreatePersonDay(c *gin.Context) {
 		return
 	}
 
-	holidays, _ := dbGetHolidays()
+	holidays, err := dbGetHolidays()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "节假日数据查询失败: " + err.Error()})
+		return
+	}
 	record := CalculateAndBuildRecord(customerName, strings.TrimSpace(body.WorkContent), startTime, endTime, holidays)
 
 	id, err := dbInsertPersonDay(record)
@@ -655,7 +659,11 @@ func handleUpdatePersonDay(c *gin.Context) {
 		return
 	}
 
-	holidays, _ := dbGetHolidays()
+	holidays, err := dbGetHolidays()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "节假日数据查询失败: " + err.Error()})
+		return
+	}
 	record := CalculateAndBuildRecord(customerName, strings.TrimSpace(body.WorkContent), startTime, endTime, holidays)
 	record.ID = id
 
@@ -706,7 +714,11 @@ func handleCalculatePersonDay(c *gin.Context) {
 		return
 	}
 
-	holidays, _ := dbGetHolidays()
+	holidays, err := dbGetHolidays()
+	if err != nil {
+		fmt.Printf("[PersonDay] 节假日查询失败，使用空map: %v\n", err)
+		holidays = make(map[string]string)
+	}
 	calc := CalculatePersonDays(startTime, endTime, holidays)
 
 	c.JSON(http.StatusOK, gin.H{
