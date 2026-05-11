@@ -72,6 +72,38 @@ func initDB() {
 	`); err != nil {
 		log.Fatalf("创建 sessions 表失败: %v", err)
 	}
+	if _, err := db.Exec(`
+		CREATE TABLE IF NOT EXISTS person_days (
+			id INT AUTO_INCREMENT PRIMARY KEY,
+			customer_name VARCHAR(100) NOT NULL COMMENT '客户名称',
+			start_time DATETIME NOT NULL COMMENT '开始时间',
+			end_time DATETIME NOT NULL COMMENT '结束时间',
+			person_days DECIMAL(10,2) NOT NULL COMMENT '人天数',
+			work_hours DECIMAL(10,2) NOT NULL COMMENT '工作时间(小时)',
+			overtime_hours DECIMAL(10,2) NOT NULL COMMENT '加班时间(小时)',
+			holiday_hours DECIMAL(10,2) NOT NULL COMMENT '节假日时间(小时)',
+			work_content TEXT DEFAULT NULL COMMENT '工作内容',
+			detail TEXT DEFAULT NULL COMMENT '计算明细',
+			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+			KEY idx_customer_name (customer_name),
+			KEY idx_created_at (created_at)
+		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+	`); err != nil {
+		log.Fatalf("创建 person_days 表失败: %v", err)
+	}
+
+	db.Exec(`ALTER TABLE person_days ADD COLUMN work_content TEXT DEFAULT NULL COMMENT '工作内容' AFTER holiday_hours`)
+
+	if _, err := db.Exec(`
+		CREATE TABLE IF NOT EXISTS holidays (
+			date DATE NOT NULL PRIMARY KEY COMMENT '节假日日期',
+			name VARCHAR(50) DEFAULT NULL COMMENT '节假日名称',
+			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间'
+		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+	`); err != nil {
+		log.Fatalf("创建 holidays 表失败: %v", err)
+	}
+
 	log.Println("数据库表初始化完成")
 }
 
@@ -304,4 +336,114 @@ func dbVerifyConnectivity() error {
 		return fmt.Errorf("数据库未初始化")
 	}
 	return db.Ping()
+}
+
+type PersonDayRecord struct {
+	ID            int       `json:"id"`
+	CustomerName  string    `json:"customer_name"`
+	StartTime     time.Time `json:"start_time"`
+	EndTime       time.Time `json:"end_time"`
+	PersonDays    float64   `json:"person_days"`
+	WorkHours     float64   `json:"work_hours"`
+	OvertimeHours float64   `json:"overtime_hours"`
+	HolidayHours  float64   `json:"holiday_hours"`
+	WorkContent   string    `json:"work_content"`
+	Detail        string    `json:"detail"`
+	CreatedAt     time.Time `json:"created_at"`
+}
+
+func dbInsertPersonDay(r *PersonDayRecord) (int64, error) {
+	result, err := db.Exec(
+		`INSERT INTO person_days (customer_name, start_time, end_time, person_days, work_hours, overtime_hours, holiday_hours, work_content, detail)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		r.CustomerName, r.StartTime, r.EndTime, r.PersonDays, r.WorkHours, r.OvertimeHours, r.HolidayHours, r.WorkContent, r.Detail,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.LastInsertId()
+}
+
+func dbGetPersonDays() ([]PersonDayRecord, error) {
+	rows, err := db.Query(`SELECT id, customer_name, start_time, end_time, person_days, work_hours, overtime_hours, holiday_hours, work_content, detail, created_at FROM person_days ORDER BY created_at DESC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var results []PersonDayRecord
+	for rows.Next() {
+		var r PersonDayRecord
+		var workContent, detail sql.NullString
+		if err := rows.Scan(&r.ID, &r.CustomerName, &r.StartTime, &r.EndTime, &r.PersonDays, &r.WorkHours, &r.OvertimeHours, &r.HolidayHours, &workContent, &detail, &r.CreatedAt); err != nil {
+			continue
+		}
+		if workContent.Valid {
+			r.WorkContent = workContent.String
+		}
+		if detail.Valid {
+			r.Detail = detail.String
+		}
+		results = append(results, r)
+	}
+	return results, nil
+}
+
+func dbUpdatePersonDay(r *PersonDayRecord) error {
+	_, err := db.Exec(
+		`UPDATE person_days SET customer_name=?, start_time=?, end_time=?, person_days=?, work_hours=?, overtime_hours=?, holiday_hours=?, work_content=?, detail=? WHERE id=?`,
+		r.CustomerName, r.StartTime, r.EndTime, r.PersonDays, r.WorkHours, r.OvertimeHours, r.HolidayHours, r.WorkContent, r.Detail, r.ID,
+	)
+	return err
+}
+
+func dbDeletePersonDay(id int) error {
+	_, err := db.Exec(`DELETE FROM person_days WHERE id=?`, id)
+	return err
+}
+
+func dbGetHolidays() (map[string]string, error) {
+	rows, err := db.Query(`SELECT date, name FROM holidays ORDER BY date`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	result := make(map[string]string)
+	for rows.Next() {
+		var date time.Time
+		var name sql.NullString
+		if err := rows.Scan(&date, &name); err == nil {
+			result[date.Format("2006-01-02")] = nullableString(name)
+		}
+	}
+	return result, nil
+}
+
+func dbInsertHoliday(date string, name string) error {
+	_, err := db.Exec(`INSERT INTO holidays (date, name) VALUES (?, ?) ON DUPLICATE KEY UPDATE name=VALUES(name)`, date, name)
+	return err
+}
+
+func dbDeleteHoliday(date string) error {
+	_, err := db.Exec(`DELETE FROM holidays WHERE date=?`, date)
+	return err
+}
+
+func dbGetAllHolidaysList() ([]map[string]string, error) {
+	rows, err := db.Query(`SELECT date, name FROM holidays ORDER BY date`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var results []map[string]string
+	for rows.Next() {
+		var date time.Time
+		var name sql.NullString
+		if err := rows.Scan(&date, &name); err == nil {
+			results = append(results, map[string]string{
+				"date": date.Format("2006-01-02"),
+				"name": nullableString(name),
+			})
+		}
+	}
+	return results, nil
 }

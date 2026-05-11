@@ -45,6 +45,16 @@ func main() {
 	r.GET("/api/admin/files", handleAdminFiles)
 	r.POST("/api/admin/cleanup", handleAdminCleanup)
 
+	r.POST("/api/persondays", handleCreatePersonDay)
+	r.GET("/api/persondays", handleListPersonDays)
+	r.PUT("/api/persondays/:id", handleUpdatePersonDay)
+	r.DELETE("/api/persondays/:id", handleDeletePersonDay)
+	r.POST("/api/persondays/calculate", handleCalculatePersonDay)
+	r.GET("/api/holidays", handleListHolidays)
+	r.POST("/api/holidays", handleAddHoliday)
+	r.DELETE("/api/holidays/:date", handleDeleteHoliday)
+	r.POST("/api/holidays/fetch", handleFetchHolidays)
+
 	r.Static("/api/reports", "./web_data/reports")
 
 	r.Run(":8080")

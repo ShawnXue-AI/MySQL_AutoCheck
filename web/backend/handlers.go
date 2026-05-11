@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"archive/zip"
 	"compress/gzip"
+	"encoding/json"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -554,4 +555,355 @@ func untargz(src, dst string) error {
 		}
 	}
 	return nil
+}
+
+func handleCreatePersonDay(c *gin.Context) {
+	var body struct {
+		CustomerName string `json:"customer_name"`
+		StartTime    string `json:"start_time"`
+		EndTime      string `json:"end_time"`
+		WorkContent  string `json:"work_content"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "参数错误: " + err.Error()})
+		return
+	}
+
+	customerName := strings.TrimSpace(body.CustomerName)
+	if customerName == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "客户名称不能为空"})
+		return
+	}
+
+	startTime, err := time.Parse("2006-01-02 15:04", body.StartTime)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "开始时间格式错误，请使用 YYYY-MM-DD HH:mm"})
+		return
+	}
+	endTime, err := time.Parse("2006-01-02 15:04", body.EndTime)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "结束时间格式错误，请使用 YYYY-MM-DD HH:mm"})
+		return
+	}
+	if !endTime.After(startTime) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "结束时间必须晚于开始时间"})
+		return
+	}
+
+	holidays, _ := dbGetHolidays()
+	record := CalculateAndBuildRecord(customerName, strings.TrimSpace(body.WorkContent), startTime, endTime, holidays)
+
+	id, err := dbInsertPersonDay(record)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "保存失败: " + err.Error()})
+		return
+	}
+	record.ID = int(id)
+
+	c.JSON(http.StatusOK, gin.H{"record": record})
+}
+
+func handleListPersonDays(c *gin.Context) {
+	records, err := dbGetPersonDays()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "查询失败: " + err.Error()})
+		return
+	}
+	if records == nil {
+		records = []PersonDayRecord{}
+	}
+	c.JSON(http.StatusOK, gin.H{"records": records})
+}
+
+func handleUpdatePersonDay(c *gin.Context) {
+	idStr := c.Param("id")
+	var id int
+	if _, err := fmt.Sscanf(idStr, "%d", &id); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的ID"})
+		return
+	}
+
+	var body struct {
+		CustomerName string `json:"customer_name"`
+		StartTime    string `json:"start_time"`
+		EndTime      string `json:"end_time"`
+		WorkContent  string `json:"work_content"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "参数错误: " + err.Error()})
+		return
+	}
+
+	customerName := strings.TrimSpace(body.CustomerName)
+	if customerName == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "客户名称不能为空"})
+		return
+	}
+
+	startTime, err := time.Parse("2006-01-02 15:04", body.StartTime)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "开始时间格式错误"})
+		return
+	}
+	endTime, err := time.Parse("2006-01-02 15:04", body.EndTime)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "结束时间格式错误"})
+		return
+	}
+	if !endTime.After(startTime) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "结束时间必须晚于开始时间"})
+		return
+	}
+
+	holidays, _ := dbGetHolidays()
+	record := CalculateAndBuildRecord(customerName, strings.TrimSpace(body.WorkContent), startTime, endTime, holidays)
+	record.ID = id
+
+	if err := dbUpdatePersonDay(record); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "更新失败: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"record": record})
+}
+
+func handleDeletePersonDay(c *gin.Context) {
+	idStr := c.Param("id")
+	var id int
+	if _, err := fmt.Sscanf(idStr, "%d", &id); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的ID"})
+		return
+	}
+	if err := dbDeletePersonDay(id); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "删除失败: " + err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "删除成功"})
+}
+
+func handleCalculatePersonDay(c *gin.Context) {
+	var body struct {
+		StartTime string `json:"start_time"`
+		EndTime   string `json:"end_time"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "参数错误"})
+		return
+	}
+
+	startTime, err := time.Parse("2006-01-02 15:04", body.StartTime)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "开始时间格式错误"})
+		return
+	}
+	endTime, err := time.Parse("2006-01-02 15:04", body.EndTime)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "结束时间格式错误"})
+		return
+	}
+	if !endTime.After(startTime) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "结束时间必须晚于开始时间"})
+		return
+	}
+
+	holidays, _ := dbGetHolidays()
+	calc := CalculatePersonDays(startTime, endTime, holidays)
+
+	c.JSON(http.StatusOK, gin.H{
+		"person_days":    calc.PersonDays,
+		"work_hours":     calc.WorkHours,
+		"overtime_hours": calc.OvertimeHours,
+		"holiday_hours":  calc.HolidayHours,
+		"detail":         calc.Detail,
+	})
+}
+
+func handleListHolidays(c *gin.Context) {
+	holidays, err := dbGetAllHolidaysList()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "查询失败"})
+		return
+	}
+	if holidays == nil {
+		holidays = []map[string]string{}
+	}
+	c.JSON(http.StatusOK, gin.H{"holidays": holidays})
+}
+
+func handleAddHoliday(c *gin.Context) {
+	var body struct {
+		Date string `json:"date"`
+		Name string `json:"name"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "参数错误"})
+		return
+	}
+	if body.Date == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "日期不能为空"})
+		return
+	}
+	if _, err := time.Parse("2006-01-02", body.Date); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "日期格式错误，请使用 YYYY-MM-DD"})
+		return
+	}
+	if err := dbInsertHoliday(body.Date, body.Name); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "保存失败: " + err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "保存成功"})
+}
+
+func handleDeleteHoliday(c *gin.Context) {
+	date := c.Param("date")
+	if date == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "日期不能为空"})
+		return
+	}
+	if err := dbDeleteHoliday(date); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "删除失败: " + err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "删除成功"})
+}
+
+func handleFetchHolidays(c *gin.Context) {
+	var body struct {
+		Year int `json:"year"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil || body.Year == 0 {
+		body.Year = time.Now().Year()
+	}
+
+	years := []int{body.Year, body.Year + 1}
+	totalImported := 0
+	totalFound := 0
+	insertErrors := 0
+	var errors []string
+	var debug []string
+
+	transport := &http.Transport{}
+	client := &http.Client{Transport: transport, Timeout: 15 * time.Second}
+
+	for _, year := range years {
+		urls := []string{
+			fmt.Sprintf("https://timor.tech/api/holiday/year/%d", year),
+			fmt.Sprintf("http://timor.tech/api/holiday/year/%d", year),
+		}
+		var bodyBytes []byte
+		var successURL string
+		var statusCode int
+
+		for _, url := range urls {
+			req, err := http.NewRequest("GET", url, nil)
+			if err != nil {
+				continue
+			}
+			req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+			req.Header.Set("Accept", "application/json, text/plain, */*")
+
+			resp, err := client.Do(req)
+			if err != nil {
+				fmt.Printf("[HolidayFetch] %s 请求失败: %v\n", url, err)
+				continue
+			}
+			bodyBytes, err = io.ReadAll(resp.Body)
+			resp.Body.Close()
+			statusCode = resp.StatusCode
+			if err != nil {
+				fmt.Printf("[HolidayFetch] %s 读取失败: %v\n", url, err)
+				continue
+			}
+			if statusCode == 200 && len(bodyBytes) > 0 && bodyBytes[0] == '{' {
+				successURL = url
+				break
+			}
+			bodyPreview := string(bodyBytes[:min(len(bodyBytes), 500)])
+			fmt.Printf("[HolidayFetch] %s status=%d body=%s\n", url, statusCode, bodyPreview)
+		}
+
+		if successURL == "" {
+			msg := fmt.Sprintf("API请求失败(year=%d), 所有URL均未返回有效JSON", year)
+			fmt.Printf("[HolidayFetch] %s\n", msg)
+			errors = append(errors, msg)
+			continue
+		}
+
+		bodyStr := string(bodyBytes)
+		debug = append(debug, fmt.Sprintf("年份%d(%s): status=%d len=%d", year, successURL, statusCode, len(bodyStr)))
+		fmt.Printf("[HolidayFetch] year=%d status=%d len=%d\n", year, statusCode, len(bodyStr))
+
+		var result struct {
+			Code    int                     `json:"code"`
+			Holiday map[string]*json.RawMessage `json:"holiday"`
+		}
+		if err := json.Unmarshal(bodyBytes, &result); err != nil {
+			msg := fmt.Sprintf("JSON解析失败(year=%d): %v, body前100字=%s", year, err, bodyStr[:min(len(bodyStr), 100)])
+			fmt.Printf("[HolidayFetch] %s\n", msg)
+			errors = append(errors, msg)
+			continue
+		}
+		if result.Code != 0 {
+			msg := fmt.Sprintf("API错误码(year=%d): code=%d", year, result.Code)
+			fmt.Printf("[HolidayFetch] %s\n", msg)
+			errors = append(errors, msg)
+			continue
+		}
+
+		debug = append(debug, fmt.Sprintf("年份%d: API返回%d条记录", year, len(result.Holiday)))
+
+		for dateKey, raw := range result.Holiday {
+			var item struct {
+				Holiday bool   `json:"holiday"`
+				Name    string `json:"name"`
+				Date    string `json:"date"`
+			}
+			if err := json.Unmarshal(*raw, &item); err != nil {
+				continue
+			}
+			if item.Holiday {
+				totalFound++
+				dateStr := item.Date
+				if dateStr == "" {
+					dateStr = fmt.Sprintf("%d-%s", year, dateKey)
+				}
+				if err := dbInsertHoliday(dateStr, item.Name); err != nil {
+					insertErrors++
+					msg := fmt.Sprintf("插入失败: date=%s name=%s err=%v", dateStr, item.Name, err)
+					fmt.Printf("[HolidayFetch] %s\n", msg)
+					if insertErrors <= 3 {
+						errors = append(errors, msg)
+					}
+				} else {
+					totalImported++
+				}
+			}
+		}
+	}
+
+	debug = append(debug, fmt.Sprintf("共找到%d个节假日, 成功导入%d, 插入失败%d", totalFound, totalImported, insertErrors))
+
+	holidays, _ := dbGetAllHolidaysList()
+	if holidays == nil {
+		holidays = []map[string]string{}
+	}
+
+	msg := fmt.Sprintf("已同步 %d 个节假日", totalImported)
+	if len(errors) > 0 {
+		msg += "\n错误: " + strings.Join(errors, "; ")
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":  msg,
+		"holidays": holidays,
+		"errors":   errors,
+		"debug":    debug,
+	})
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
