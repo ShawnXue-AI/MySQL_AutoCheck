@@ -1,0 +1,13 @@
+# Python依赖包列表
+# 用于生成Word报告
+python-docx>=0.8.11
+
+# 可选：用于数据可视化（如果需要）
+matplotlib>=3.3.4
+seaborn>=0.11.2
+
+# 可选：用于处理大型数据集
+pandas>=1.1.5
+
+# 用于生成Excel统计表格
+openpyxl>=3.0.0
