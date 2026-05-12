@@ -96,3 +96,56 @@ export function getAdminFiles() {
 export function adminCleanup(paths) {
   return api.post('/admin/cleanup', { paths })
 }
+
+// --- Person-Day APIs ---
+
+export function createPersonDay(customerName, startTime, endTime, workContent) {
+  return api.post('/persondays', {
+    customer_name: customerName,
+    start_time: startTime,
+    end_time: endTime,
+    work_content: workContent || ''
+  })
+}
+
+export function getPersonDays() {
+  return api.get('/persondays')
+}
+
+export function updatePersonDay(id, customerName, startTime, endTime, workContent) {
+  return api.put(`/persondays/${id}`, {
+    customer_name: customerName,
+    start_time: startTime,
+    end_time: endTime,
+    work_content: workContent || ''
+  })
+}
+
+export function deletePersonDay(id) {
+  return api.delete(`/persondays/${id}`)
+}
+
+export function calculatePersonDay(startTime, endTime) {
+  return api.post('/persondays/calculate', {
+    start_time: startTime,
+    end_time: endTime
+  })
+}
+
+// --- Holiday APIs ---
+
+export function getHolidays() {
+  return api.get('/holidays')
+}
+
+export function addHoliday(date, name) {
+  return api.post('/holidays', { date, name })
+}
+
+export function deleteHoliday(date) {
+  return api.delete(`/holidays/${encodeURIComponent(date)}`)
+}
+
+export function fetchHolidaysAPI(year) {
+  return api.post('/holidays/fetch', { year: year || new Date().getFullYear() })
+}

@@ -31,6 +31,11 @@
           <span>巡检基准值</span>
           <kbd class="nav-shortcut">B</kbd>
         </router-link>
+        <router-link to="/persondays" class="nav-item" :class="{ active: $route.path === '/persondays' }">
+          <svg viewBox="0 0 24 24" class="nav-icon"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zm0-12H5V6h14v2z" fill="currentColor"/></svg>
+          <span>人天记录</span>
+          <kbd class="nav-shortcut">P</kbd>
+        </router-link>
       </nav>
       <div class="sidebar-bottom">
         <div class="sidebar-footer">
@@ -60,7 +65,7 @@
     </aside>
     <main class="main-content">
       <header class="top-bar">
-        <h1 class="page-title">{{ $route.path === '/' ? '报告生成' : $route.path === '/admin' ? '后端管理' : $route.path === '/benchmarks' ? '巡检基准值' : '任务记录' }}</h1>
+        <h1 class="page-title">{{ $route.path === '/' ? '报告生成' : $route.path === '/admin' ? '后端管理' : $route.path === '/benchmarks' ? '巡检基准值' : $route.path === '/persondays' ? '人天记录' : '任务记录' }}</h1>
         <div class="top-bar-right">
           <span class="top-version">v1.0.0</span>
         </div>
