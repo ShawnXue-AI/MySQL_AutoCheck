@@ -575,12 +575,12 @@ func handleCreatePersonDay(c *gin.Context) {
 		return
 	}
 
-	startTime, err := time.Parse("2006-01-02 15:04", body.StartTime)
+	startTime, err := time.ParseInLocation("2006-01-02 15:04", body.StartTime, time.Local)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "开始时间格式错误，请使用 YYYY-MM-DD HH:mm"})
 		return
 	}
-	endTime, err := time.Parse("2006-01-02 15:04", body.EndTime)
+	endTime, err := time.ParseInLocation("2006-01-02 15:04", body.EndTime, time.Local)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "结束时间格式错误，请使用 YYYY-MM-DD HH:mm"})
 		return
@@ -644,12 +644,12 @@ func handleUpdatePersonDay(c *gin.Context) {
 		return
 	}
 
-	startTime, err := time.Parse("2006-01-02 15:04", body.StartTime)
+	startTime, err := time.ParseInLocation("2006-01-02 15:04", body.StartTime, time.Local)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "开始时间格式错误"})
 		return
 	}
-	endTime, err := time.Parse("2006-01-02 15:04", body.EndTime)
+	endTime, err := time.ParseInLocation("2006-01-02 15:04", body.EndTime, time.Local)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "结束时间格式错误"})
 		return
@@ -699,12 +699,12 @@ func handleCalculatePersonDay(c *gin.Context) {
 		return
 	}
 
-	startTime, err := time.Parse("2006-01-02 15:04", body.StartTime)
+	startTime, err := time.ParseInLocation("2006-01-02 15:04", body.StartTime, time.Local)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "开始时间格式错误"})
 		return
 	}
-	endTime, err := time.Parse("2006-01-02 15:04", body.EndTime)
+	endTime, err := time.ParseInLocation("2006-01-02 15:04", body.EndTime, time.Local)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "结束时间格式错误"})
 		return

@@ -2,14 +2,20 @@
   <div class="tasks-view">
     <div class="tasks-toolbar">
       <div class="tasks-count">{{ sortedTasks.length }} 条记录</div>
-      <button v-if="sortedTasks.length > 0" class="btn btn-ghost btn-sm" @click="refreshTasks">刷新</button>
+      <button v-if="sortedTasks.length > 0" class="btn btn-outline btn-sm" @click="refreshTasks">
+        <svg viewBox="0 0 24 24" class="btn-icon" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+        刷新
+      </button>
     </div>
 
     <div v-if="sortedTasks.length === 0" class="empty-state">
       <svg viewBox="0 0 48 48" class="empty-icon"><path d="M24 4C12.95 4 4 12.95 4 24s8.95 20 20 20 20-8.95 20-20S35.05 4 24 4zm-2 30h-4V18h4v16zm8 0h-4V18h4v16z" fill="currentColor"/></svg>
       <p class="empty-title">暂无历史记录</p>
       <p class="empty-desc">完成分析后，任务将显示在此处</p>
-      <router-link to="/" class="btn btn-primary">去生成报告</router-link>
+      <router-link to="/" class="btn btn-primary">
+        <svg viewBox="0 0 24 24" class="btn-icon" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+        去生成报告
+      </router-link>
     </div>
 
     <div v-else class="task-list">
@@ -81,48 +87,36 @@ export default {
 .tasks-view { max-width: 960px; margin: 0 auto; }
 
 .tasks-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-.tasks-count { font-size: 13px; color: #8b949e; }
-
-.btn { display: inline-flex; align-items: center; gap: 8px; padding: 9px 20px; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; text-decoration: none; transition: all 0.15s; }
-.btn-ghost { background: transparent; color: #8b949e; padding: 6px 12px; font-size: 13px; }
-.btn-ghost:hover { color: #c9d1d9; background: #1c2128; }
-.btn-sm { padding: 6px 12px; font-size: 13px; }
-.btn-primary { background: #238636; color: #fff; }
-.btn-primary:hover { background: #2ea043; }
-
-.empty-state { text-align: center; padding: 80px 20px; }
-.empty-icon { width: 48px; height: 48px; margin: 0 auto 16px; color: #30363d; }
-.empty-title { font-size: 16px; font-weight: 600; color: #c9d1d9; margin-bottom: 8px; }
-.empty-desc { font-size: 14px; color: #8b949e; margin-bottom: 24px; }
+.tasks-count { font-size: 13px; color: var(--muted-foreground); }
 
 .task-list { display: flex; flex-direction: column; gap: 4px; }
-.task-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; background: #161b22; border: 1px solid #21262d; border-radius: 10px; transition: border-color 0.15s; }
-.task-row:hover { border-color: #30363d; }
+.task-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; background: rgba(17,17,19,0.3); border: 1px solid var(--border); border-radius: var(--radius); transition: border-color 0.15s; }
+.task-row:hover { border-color: var(--border-hover); background: rgba(59,130,246,0.05); }
 
 .task-row-left { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; }
 .task-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-.task-dot.completed { background: #3fb950; }
-.task-dot.running { background: #3fb950; animation: pulse 1.5s infinite; }
-.task-dot.cancelled { background: #484f58; }
-.task-dot.pending { background: #30363d; }
-.task-dot.failed { background: #da3633; }
+.task-dot.completed { background: #22c55e; }
+.task-dot.running { background: #22c55e; animation: pulse 1.5s infinite; }
+.task-dot.cancelled { background: var(--muted-foreground); }
+.task-dot.pending { background: var(--border); }
+.task-dot.failed { background: var(--destructive); }
 @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
 
 .task-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.task-row-name { font-size: 14px; font-weight: 600; color: #f0f6fc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.task-row-meta { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #8b949e; }
-.meta-sep { color: #30363d; }
+.task-row-name { font-size: 14px; font-weight: 600; color: var(--foreground); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.task-row-meta { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted-foreground); }
+.meta-sep { color: var(--border); }
 .meta-file { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .task-row-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .task-badge { font-size: 12px; font-weight: 500; padding: 2px 10px; border-radius: 20px; }
-.task-badge.completed { background: rgba(35,134,54,0.15); color: #3fb950; }
-.task-badge.running { background: rgba(35,134,54,0.15); color: #3fb950; }
-.task-badge.cancelled { background: #21262d; color: #484f58; }
-.task-badge.pending { background: #21262d; color: #8b949e; }
-.task-badge.failed { background: rgba(218,54,51,0.15); color: #f85149; }
+.task-badge.completed { background: rgba(34,197,94,0.12); color: #22c55e; }
+.task-badge.running { background: rgba(34,197,94,0.12); color: #22c55e; }
+.task-badge.cancelled { background: var(--muted); color: var(--muted-foreground); }
+.task-badge.pending { background: var(--muted); color: var(--muted-foreground); }
+.task-badge.failed { background: rgba(239,68,68,0.12); color: var(--destructive); }
 
-.btn-icon-btn { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; background: #21262d; border: none; border-radius: 6px; color: #8b949e; cursor: pointer; text-decoration: none; transition: all 0.15s; }
-.btn-icon-btn:hover { background: #1c2128; color: #3fb950; }
-.btn-icon-btn.danger:hover { background: #da3633; color: #fff; }
+.btn-icon-btn { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; background: var(--muted); border: none; border-radius: 6px; color: var(--muted-foreground); cursor: pointer; text-decoration: none; transition: all 0.15s; }
+.btn-icon-btn:hover { background: var(--border); color: var(--foreground); }
+.btn-icon-btn.danger:hover { background: var(--destructive); color: #fff; }
 </style>
